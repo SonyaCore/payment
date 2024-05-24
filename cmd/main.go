@@ -6,18 +6,20 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"payment/internal/discounts"
 	"payment/internal/wallets"
 	"payment/pkg/config"
 	"payment/pkg/db"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // Program Info
 var (
 	version = "1.0.0"
 	build   = "Custom"
-	name    = "Payment service"
+	name    = "Payment Service"
 )
 
 // Version returns version
@@ -63,27 +65,20 @@ func main() {
 	logger.Println("Connected to database")
 
 	var walletHandler = wallets.NewHandler(database, logger)
+	var discountHandler = discounts.NewHandler(&discounts.Config{
+		CreditExpiration: time.Duration(configuration.DiscountConfig.ExpireTime) * time.Minute,
+		CodeLength:       configuration.DiscountConfig.CodeLength},
+		logger, database)
 
 	r := mux.NewRouter()
 	http.Handle("/", r)
 
 	walletHandler.RegisterRoutes(r)
+	discountHandler.RegisterRoutes(r)
 
-	showRoutes(r)
-
+	logger.Infof("%s is listening on port %d", name, configuration.ServerPort)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", configuration.ServerPort), nil)
 	if err != nil {
 		panic(err)
 	}
-}
-
-func showRoutes(r *mux.Router) {
-	fmt.Println("Available Routes:")
-	r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-		tpl, _ := route.GetPathTemplate()
-		met, _ := route.GetMethods()
-		fmt.Println(tpl, met)
-		return nil
-	})
-
 }
