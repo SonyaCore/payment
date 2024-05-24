@@ -10,6 +10,7 @@ import (
 	"payment/api/models"
 	"payment/internal/transactions"
 	"payment/pkg/db"
+	"payment/pkg/errors"
 )
 
 // RegisterRoutes registers the routes for wallet-related operations with the provided router.
@@ -53,7 +54,7 @@ func (h *Handler) createWalletHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if model, _ := h.WalletService.GetByPhone(ctx, wallet.Phone); model != nil {
-		http.Error(w, "wallet already exist", http.StatusBadRequest)
+		errors.Error(w, http.StatusBadRequest, "wallet already exist")
 		return
 	}
 
@@ -61,7 +62,7 @@ func (h *Handler) createWalletHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
 		h.Logger.Error(err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.Error(w, http.StatusInternalServerError, "wallet creation failed")
 		return
 	}
 
@@ -70,7 +71,7 @@ func (h *Handler) createWalletHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(wallet)
 	if err != nil {
 		h.Logger.Error(err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.Error(w, http.StatusInternalServerError)
 		return
 	}
 }
@@ -85,7 +86,7 @@ func (h *Handler) deleteWalletHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		h.Logger.Error(err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.Error(w, http.StatusInternalServerError, "failed to delete wallet")
 		return
 	}
 
@@ -94,7 +95,7 @@ func (h *Handler) deleteWalletHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(wallet)
 	if err != nil {
 		h.Logger.Error(err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.Error(w, http.StatusInternalServerError)
 		return
 	}
 }
@@ -109,11 +110,11 @@ func (h *Handler) transactionHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&transaction)
 	if err != nil {
 		h.Logger.Error(err.Error())
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		errors.Error(w, http.StatusBadRequest)
 		return
 	}
 	if phoneNumber == "" {
-		http.Error(w, "wallet phone required", http.StatusBadRequest)
+		errors.Error(w, http.StatusBadRequest, "wallet phone number is required")
 		return
 	}
 
@@ -121,7 +122,7 @@ func (h *Handler) transactionHandler(w http.ResponseWriter, r *http.Request) {
 	wallet, err := h.WalletService.GetByPhone(ctx, phoneNumber)
 	if err != nil {
 		h.Logger.Error(err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.Error(w, http.StatusInternalServerError, "wallet phone number is required")
 		return
 	}
 
@@ -144,13 +145,13 @@ func (h *Handler) transactionHandler(w http.ResponseWriter, r *http.Request) {
 				"required_amount": transaction.Amount,
 			}).Error("Insufficient funds")
 
-			http.Error(w, fmt.Sprintf("insufficient funds: wallet %s balance is %d, but %d is required", wallet.Phone, wallet.Amount, transaction.Amount), http.StatusBadRequest)
+			errors.Error(w, http.StatusBadRequest, fmt.Sprintf("insufficient funds: wallet %s balance is %d, but %d is required", wallet.Phone, wallet.Amount, transaction.Amount))
 			return
 		}
 	case models.Deposit:
 		transaction.Type = models.Deposit
 	default:
-		http.Error(w, "unknown transaction type", http.StatusBadRequest)
+		errors.Error(w, http.StatusBadRequest, "unknown transaction type")
 		return
 	}
 
@@ -163,14 +164,15 @@ func (h *Handler) transactionHandler(w http.ResponseWriter, r *http.Request) {
 			"error":       err,
 		}).Error("Transaction failed")
 
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.Error(w, http.StatusBadRequest)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(transaction); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+	if err = json.NewEncoder(w).Encode(transaction); err != nil {
+		errors.Error(w, http.StatusInternalServerError)
 	}
 }
 
@@ -183,13 +185,13 @@ func (h *Handler) returnByPhoneNumber(w http.ResponseWriter, r *http.Request) {
 	wallet, err := h.WalletService.GetByPhone(ctx, phoneNumber)
 	if err != nil {
 		h.Logger.Error(err.Error())
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		errors.Error(w, http.StatusBadRequest, "wallet not found")
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(wallet); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err = json.NewEncoder(w).Encode(wallet); err != nil {
+		errors.Error(w, http.StatusInternalServerError)
 	}
 }

@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: database
+    ports:
+      - 5432:5432
+    env_file:
+      - ./configs/config.yml
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks:
+      - payment-network
+
+  migrate:
+    build:
+      context: .
+      dockerfile: migrate/Dockerfile
+    container_name: migrate-tool
+    depends_on:
+      - postgres
+    volumes:
+      - ./configs:/app/configs
+    networks:
+      - payment-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: payment-app
+    depends_on:
+      - postgres
+      - migrate
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./configs:/app/configs
+    networks:
+      - payment-network
+
+volumes:
+  postgres:
+
+networks:
+  payment-network:
+    driver: bridge

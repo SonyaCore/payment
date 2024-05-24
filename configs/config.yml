@@ -4,7 +4,7 @@ discount:
   expire_time : 5
   code_length: 8
 postgres:
-  POSTGRES_HOST: "127.0.0.1"
+  POSTGRES_HOST: "postgres"
   POSTGRES_USER: "postgres"
   POSTGRES_PASSWORD: "password"
   POSTGRES_DB: "payment"

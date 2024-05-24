@@ -10,6 +10,7 @@ import (
 	"payment/internal/wallets"
 	"payment/pkg/config"
 	"payment/pkg/db"
+	"payment/pkg/utils"
 	"runtime"
 	"strings"
 	"time"
@@ -71,7 +72,7 @@ func main() {
 		logger, database)
 
 	r := mux.NewRouter()
-	http.Handle("/", r)
+	http.Handle("/", utils.RecoverHandler(r))
 
 	walletHandler.RegisterRoutes(r)
 	discountHandler.RegisterRoutes(r)

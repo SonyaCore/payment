@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"payment/api/models"
 	"payment/pkg/db"
+	"payment/pkg/errors"
 	"payment/pkg/utils"
 	"time"
 )
@@ -35,7 +36,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 
 	discountRoutes.HandleFunc("/", h.createDiscount).Methods(http.MethodPost)
 	discountRoutes.HandleFunc("/usages", h.discountTransactions).Methods(http.MethodGet)
-	discountRoutes.HandleFunc("/apply", h.applyDiscount).Methods(http.MethodPost)
+	discountRoutes.HandleFunc("/apply", h.applyDiscount).Methods(http.MethodGet)
 
 }
 
@@ -45,12 +46,13 @@ func (h *Handler) createDiscount(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	if err = json.NewDecoder(r.Body).Decode(&discount); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		h.logger.Error(err)
+		errors.Error(w, http.StatusBadRequest)
 		return
 	}
 
 	if discount.Type == "" {
-		http.Error(w, "discount type is required", http.StatusBadRequest)
+		errors.Error(w, http.StatusBadRequest, "discount type is required")
 		return
 	}
 
@@ -58,7 +60,7 @@ func (h *Handler) createDiscount(w http.ResponseWriter, r *http.Request) {
 	case models.Voucher, models.Charge:
 		break
 	default:
-		http.Error(w, "discount type is invalid", http.StatusBadRequest)
+		errors.Error(w, http.StatusBadRequest, "discount type is invalid")
 		return
 	}
 
@@ -67,7 +69,8 @@ func (h *Handler) createDiscount(w http.ResponseWriter, r *http.Request) {
 	discount.Code = utils.GenerateDiscount(h.config.CodeLength)
 
 	if discount, err = h.discount.Create(r.Context(), discount); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		h.logger.Error(err)
+		errors.Error(w, http.StatusBadRequest)
 		return
 	} else {
 		w.Header().Set("Content-Type", "application/json")
@@ -86,7 +89,7 @@ func (h *Handler) discountTransactions(w http.ResponseWriter, r *http.Request) {
 
 	discount, err := h.discount.GetByCode(r.Context(), discountCode)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		errors.Error(w, http.StatusBadRequest)
 		return
 	}
 
@@ -103,11 +106,11 @@ func (h *Handler) applyDiscount(w http.ResponseWriter, r *http.Request) {
 	phoneNumber := r.URL.Query().Get("phone")
 
 	if discountCode == "" {
-		http.Error(w, "discount code is required", http.StatusBadRequest)
+		errors.Error(w, http.StatusBadRequest, "discount code is required")
 		return
 	}
 	if phoneNumber == "" {
-		http.Error(w, "phone number is required", http.StatusBadRequest)
+		errors.Error(w, http.StatusBadRequest, "phone number is required")
 		return
 	}
 
@@ -118,7 +121,7 @@ func (h *Handler) applyDiscount(w http.ResponseWriter, r *http.Request) {
 
 	discount, err := h.service.Apply(r.Context(), req)
 	if err != nil {
-		http.Error(w, "failed to apply discount: "+err.Error(), http.StatusBadRequest)
+		errors.Error(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
