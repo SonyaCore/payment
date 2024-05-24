@@ -31,9 +31,9 @@ func NewWallet(logger *log.Logger, db *db.DB) IWallet {
 	return &WalletService{transactions.NewTransactionsService(logger, db), logger, db}
 }
 
-func (r *WalletService) Create(_ context.Context, wallet *models.Wallet) (*models.Wallet, error) {
+func (r *WalletService) Create(ctx context.Context, wallet *models.Wallet) (*models.Wallet, error) {
 
-	if err := r.db.Save(wallet).Error; err != nil {
+	if err := r.db.WithContext(ctx).Save(wallet).Error; err != nil {
 		r.logger.Error(err)
 		return nil, err
 	}
