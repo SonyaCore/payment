@@ -1,0 +1,260 @@
+swagger: "2.0"
+info:
+  version: "1.0.0"
+  title: "Payment App API"
+  description: "This is a simple app that implements wallet management and discount services. It is a testing app and not meant for production use."
+
+host: "localhost:8080"
+basePath: "/"
+schemes:
+  - "http"
+paths:
+  /wallet/register:
+    post:
+      summary: "Create a new wallet"
+      description: "Registers a new wallet."
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Wallet object that needs to be added"
+          required: true
+          schema:
+            $ref: "#/definitions/Wallet"
+      responses:
+        201:
+          description: "Wallet created successfully"
+          schema:
+            type: "object"
+            properties:
+              id:
+                type: "string"
+                example: "6b7ca2f3-7630-4822-96e2-287e39d3c4a3"
+              created_at:
+                type: "string"
+                format: "date-time"
+                example: "2024-05-25T04:12:34.13068+03:30"
+              updated_at:
+                type: "string"
+                format: "date-time"
+                example: "2024-05-25T04:12:34.13068+03:30"
+              phone:
+                type: "string"
+                example: "phone_number"
+              amount:
+                type: "integer"
+                example: 20000
+        400:
+          description: "Invalid input"
+        409:
+          description: "Wallet already exists"
+
+  /wallet/{phoneNumber}:
+    put:
+      summary: "Perform a transaction on a wallet"
+      description: "Updates a wallet with a transaction."
+      parameters:
+        - name: "phoneNumber"
+          in: "path"
+          required: true
+          type: "string"
+          description: "Phone number of the wallet"
+        - in: "body"
+          name: "body"
+          description: "Transaction object that needs to be applied"
+          required: true
+          schema:
+            $ref: "#/definitions/Transaction"
+      responses:
+        200:
+          description: "Transaction successful"
+        400:
+          description: "Bad Request"
+    delete:
+      summary: "Delete a wallet"
+      description: "Deletes a wallet by phone number."
+      parameters:
+        - name: "phoneNumber"
+          in: "path"
+          required: true
+          type: "string"
+          description: "Phone number of the wallet to delete"
+      responses:
+        202:
+          description: "Wallet deleted"
+        400:
+          description: "Failed to delete wallet"
+    get:
+      summary: "Get wallet by phone number"
+      description: "Returns a wallet by phone number."
+      parameters:
+        - name: "phoneNumber"
+          in: "path"
+          required: true
+          type: "string"
+          description: "Phone number of the wallet to return"
+      responses:
+        200:
+          description: "Wallet found"
+        404:
+          description: "Wallet not found"
+        400:
+          description: "Invalid phone"
+
+  /discount:
+    post:
+      summary: "Create a new discount"
+      description: "Creating a new discount code."
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Discount object that needs to be added"
+          required: true
+          schema:
+            $ref: "#/definitions/Discount"
+      responses:
+        201:
+          description: "Discount created"
+        400:
+          description: "Invalid input"
+  /discount/usages:
+    get:
+      summary: "Get discount code transactions"
+      description: "Returns a list of discount transactions."
+
+      parameters:
+        - name: "code"
+          in: "query"
+          required: true
+          type: "string"
+          description: "Discount code to show the transactions"
+
+      responses:
+        200:
+          description: "List of discount usages retrieved successfully"
+          schema:
+            type: "array"
+            items:
+              type: "object"
+              properties:
+                id:
+                  type: "string"
+                  example: "cc2fb79a-e1f5-428e-b3ea-fc86b01ebcb1"
+                created_at:
+                  type: "string"
+                  format: "date-time"
+                  example: "2024-05-25T03:59:59.049562+03:30"
+                code:
+                  type: "string"
+                  example: "EVCBGZEL"
+                description:
+                  type: "string"
+                  example: "voucher for cup league"
+                amount:
+                  type: "integer"
+                  example: 1000000
+                usage_limit:
+                  type: "integer"
+                  example: 1000
+                expiration_time:
+                  type: "string"
+                  format: "date-time"
+                  example: "2024-05-25T04:04:59.049562+03:30"
+                type:
+                  type: "string"
+                  example: "voucher"
+                transactions:
+                  type: "array"
+                  items:
+                    type: "object"
+                    properties:
+                      id:
+                        type: "string"
+                        example: "6d1c1213-ba75-4508-8efd-b2bf3d0322b0"
+                      created_at:
+                        type: "string"
+                        format: "date-time"
+                        example: "2024-05-25T04:00:21.08431+03:30"
+                      wallet_id:
+                        type: "string"
+                        example: "6a7e0cb4-4de6-4959-a031-6a1e8c7bd98d"
+                      phone:
+                        type: "string"
+                        example: "phone_number"
+        400:
+          description: "Bad Request"
+
+  /discount/apply:
+    get:
+      summary: "Apply a discount"
+      description: "Applies a discount to a wallet."
+      parameters:
+        - name: "code"
+          in: "query"
+          required: true
+          type: "string"
+          description: "Discount code to apply"
+        - name: "phone"
+          in: "query"
+          required: true
+          type: "string"
+          description: "Phone number of the wallet"
+      responses:
+        200:
+          description: "Discount applied"
+        400:
+          description: "Invalid input"
+
+definitions:
+  Wallet:
+    type: "object"
+    required:
+      - "phone"
+      - "amount"
+    properties:
+      phone:
+        type: "string"
+        example: "phone_number"
+      amount:
+        type: "integer"
+        example: 10000
+  Transaction:
+    type: "object"
+    required:
+      - "type"
+      - "amount"
+    properties:
+      type:
+        type: "string"
+        enum:
+          - "withdrawal"
+          - "deposit"
+        example: "withdrawal"
+      amount:
+        type: "integer"
+        example: 10000
+      description:
+        type: "string"
+        example: "withdrawal for something"
+  Discount:
+    type: "object"
+    required:
+      - "description"
+      - "amount"
+      - "usage_limit"
+      - "type"
+    properties:
+      description:
+        type: "string"
+        example: "10% off on your next purchase"
+      amount:
+        type: "integer"
+        example: 10
+      usage_limit:
+        type: "integer"
+        example: 100
+      type:
+        type: "string"
+        enum:
+          - "voucher"
+          - "charge"
+        example: "voucher"

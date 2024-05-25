@@ -49,7 +49,7 @@ func main() {
 	logger = log.StandardLogger()
 	logger.SetFormatter(&log.JSONFormatter{})
 
-	configFilePath := flag.String("config", "configs/config.yml", "Path to the YAML configuration file")
+	configFilePath := flag.String("config", "configs/config.yaml", "Path to the YAML configuration file")
 	flag.Parse()
 
 	configuration, err = config.LoadConfig(*configFilePath)

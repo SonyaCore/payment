@@ -60,7 +60,7 @@ func (h *Handler) createWalletHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if model, _ := h.WalletService.GetByPhone(ctx, wallet.Phone); model != nil {
-		errors.Error(w, http.StatusBadRequest, "wallet already exist")
+		errors.Error(w, http.StatusConflict, "wallet already exist")
 		return
 	}
 
@@ -87,6 +87,11 @@ func (h *Handler) deleteWalletHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	var phoneNumber = vars["phoneNumber"]
 
+	if !utils.CellphoneValidator(phoneNumber) {
+		errors.Error(w, http.StatusBadRequest, "invalid phone")
+		return
+	}
+
 	ctx := context.Background()
 	wallet, err := h.WalletService.Delete(ctx, phoneNumber)
 
@@ -112,6 +117,11 @@ func (h *Handler) transactionHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	var phoneNumber = vars["phoneNumber"]
 
+	if !utils.CellphoneValidator(phoneNumber) {
+		errors.Error(w, http.StatusBadRequest, "invalid phone")
+		return
+	}
+
 	ctx := context.Background()
 	err := json.NewDecoder(r.Body).Decode(&transaction)
 	if err != nil {
@@ -128,7 +138,7 @@ func (h *Handler) transactionHandler(w http.ResponseWriter, r *http.Request) {
 	wallet, err := h.WalletService.GetByPhone(ctx, phoneNumber)
 	if err != nil {
 		h.Logger.Error(err.Error())
-		errors.Error(w, http.StatusInternalServerError, "wallet phone number is required")
+		errors.Error(w, http.StatusInternalServerError, "wallet not found")
 		return
 	}
 
@@ -187,11 +197,16 @@ func (h *Handler) returnByPhoneNumber(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	phoneNumber := vars["phoneNumber"]
 
+	if !utils.CellphoneValidator(phoneNumber) {
+		errors.Error(w, http.StatusBadRequest, "invalid phone")
+		return
+	}
+
 	ctx := context.Background()
 	wallet, err := h.WalletService.GetByPhone(ctx, phoneNumber)
 	if err != nil {
 		h.Logger.Error(err.Error())
-		errors.Error(w, http.StatusBadRequest, "wallet not found")
+		errors.Error(w, http.StatusNotFound, "wallet not found")
 		return
 	}
 

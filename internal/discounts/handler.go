@@ -35,10 +35,9 @@ func NewHandler(config *Config, logger *log.Logger, db *db.DB) *Handler {
 func (h *Handler) RegisterRoutes(router *mux.Router) {
 	discountRoutes := router.PathPrefix("/discount").Subrouter()
 
-	discountRoutes.HandleFunc("/", h.createDiscount).Methods(http.MethodPost)
-	discountRoutes.HandleFunc("/usages", h.discountTransactions).Methods(http.MethodGet)
-	discountRoutes.HandleFunc("/apply", h.applyDiscount).Methods(http.MethodGet)
-	discountRoutes.Use(middleware.PhoneValidatorMiddleware)
+	discountRoutes.HandleFunc("", h.createDiscount).Methods(http.MethodPost)
+	discountRoutes.Handle("/usages", middleware.PhoneValidatorMiddleware(http.HandlerFunc(h.discountTransactions))).Methods(http.MethodGet)
+	discountRoutes.Handle("/apply", middleware.PhoneValidatorMiddleware(http.HandlerFunc(h.applyDiscount))).Methods(http.MethodGet)
 
 }
 
