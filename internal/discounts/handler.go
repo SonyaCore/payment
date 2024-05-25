@@ -8,6 +8,7 @@ import (
 	"payment/api/models"
 	"payment/pkg/db"
 	"payment/pkg/errors"
+	"payment/pkg/middleware"
 	"payment/pkg/utils"
 	"time"
 )
@@ -37,6 +38,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	discountRoutes.HandleFunc("/", h.createDiscount).Methods(http.MethodPost)
 	discountRoutes.HandleFunc("/usages", h.discountTransactions).Methods(http.MethodGet)
 	discountRoutes.HandleFunc("/apply", h.applyDiscount).Methods(http.MethodGet)
+	discountRoutes.Use(middleware.PhoneValidatorMiddleware)
 
 }
 

@@ -11,6 +11,7 @@ import (
 	"payment/internal/transactions"
 	"payment/pkg/db"
 	"payment/pkg/errors"
+	"payment/pkg/utils"
 )
 
 // RegisterRoutes registers the routes for wallet-related operations with the provided router.
@@ -50,6 +51,11 @@ func (h *Handler) createWalletHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.Logger.Error(err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if !utils.CellphoneValidator(wallet.Phone) {
+		errors.Error(w, http.StatusBadRequest, "invalid phone")
 		return
 	}
 
