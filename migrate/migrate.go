@@ -13,7 +13,7 @@ func main() {
 	logger := log.New()
 	logger.SetFormatter(&log.TextFormatter{})
 
-	configuration, err := config.LoadConfig("configs/config.yml")
+	configuration, err := config.LoadConfig("configs/config.yaml")
 	if err != nil {
 		logger.Fatal(err)
 	}
