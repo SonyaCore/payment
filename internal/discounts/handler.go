@@ -88,7 +88,7 @@ func (h *Handler) createDiscount(w http.ResponseWriter, r *http.Request) {
 	discount.CreatedAt = time.Now()
 	discount.Code = discountCode
 
-	if discount, err = h.discount.Create(r.Context(), discount); err != nil {
+	if discount, err = h.service.Create(r.Context(), discount); err != nil {
 		h.logger.Error(err)
 		errors.Error(w, http.StatusBadRequest)
 		return

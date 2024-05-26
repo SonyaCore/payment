@@ -11,7 +11,6 @@ import (
 // IDiscount defines the interface for the discount service, including methods for creating, retrieving, and checking discounts.
 type IDiscount interface {
 	Create(ctx context.Context, discount *models.Discount) (*models.Discount, error)
-	GetByID(ctx context.Context, id uuid.UUID) (*models.Discount, error)
 	GetByCode(ctx context.Context, code string) (*models.Discount, error)
 	IsUsed(ctx context.Context, id uuid.UUID, phoneNumber string) (bool, error)
 	Count(ctx context.Context, id uuid.UUID) (int64, error)
@@ -52,32 +51,6 @@ func (r *DiscountService) Create(ctx context.Context, discount *models.Discount)
 	r.logger.WithFields(log.Fields{
 		"discount": discount,
 	}).Info("discount created")
-
-	return discount, nil
-}
-
-func (r *DiscountService) GetByID(ctx context.Context, id uuid.UUID) (*models.Discount, error) {
-	var discount *models.Discount
-	var err error
-	if err := r.db.
-		Model(new(models.Discount)).
-		WithContext(ctx).
-		Where("id = ?", id).
-		First(&discount).Error; err != nil {
-		r.logger.WithFields(log.Fields{
-			"discount_id": id,
-			"error":       err,
-		}).Error("failed to find discount by ID")
-
-		return nil, err
-	}
-	discount.Transactions, err = r.List(ctx, discount.ID)
-	if err != nil {
-		r.logger.WithFields(log.Fields{
-			"discount_id": discount.ID,
-			"error":       err,
-		}).Error("failed to list discount transactions")
-	}
 
 	return discount, nil
 }

@@ -3,12 +3,10 @@ package discounts
 import (
 	"context"
 	"errors"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"payment/api/models"
 	"payment/internal/wallets"
 	"payment/pkg/db"
-	"strings"
 	"time"
 )
 
@@ -124,78 +122,6 @@ func (s *Service) IsExpired(_ context.Context, discount *models.Discount) error 
 	}
 	if discount.CreatedAt.After(time.Now()) {
 		return errors.New("invalid discount")
-	}
-	return nil
-}
-
-func (s *Service) Allocation(ctx context.Context, discount *models.Discount, phoneNumber string) error {
-	var (
-		err                 error
-		wallet              *models.Wallet
-		discountTransaction *models.DiscountTransaction
-	)
-	if wallet, err = s.FetchWallet(ctx, phoneNumber); err != nil {
-		return err
-	}
-
-	if discountTransaction, err = s.discountTransaction.Add(ctx, &models.DiscountTransaction{
-		DiscountID: discount.ID,
-		WalletID:   wallet.ID,
-		PhoneNum:   phoneNumber,
-	}); err != nil {
-		return err
-	}
-
-	if err = s.ChargeWallet(ctx, discount, wallet, discountTransaction); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Service) FetchWallet(ctx context.Context, phoneNumber string) (*models.Wallet, error) {
-	var (
-		err    error
-		wallet *models.Wallet
-	)
-	if wallet, err = s.walletService.GetByPhone(ctx, phoneNumber); err != nil {
-		if strings.Contains(err.Error(), "record not found") {
-			if wallet, err = s.walletService.Create(ctx, &models.Wallet{
-				Phone:  phoneNumber,
-				Amount: 0,
-			}); err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
-	}
-	return wallet, nil
-}
-
-func (s *Service) ChargeWallet(ctx context.Context, discount *models.Discount, wallet *models.Wallet, discountTransaction *models.DiscountTransaction) error {
-	var transaction = &models.Transaction{
-		WalletID:    wallet.ID,
-		Amount:      discount.Amount,
-		Description: fmt.Sprintf("charging wallet %v", wallet.ID),
-		Type:        models.Deposit,
-	}
-
-	if err := s.walletService.Transaction(ctx, wallet, transaction); err != nil {
-
-		s.logger.WithFields(log.Fields{
-			"wallet_id":     wallet.ID,
-			"discount_code": discount.Code,
-		}).WithError(err).Error("failed to deposit wallet")
-
-		if rollbackErr := s.discountTransaction.Delete(ctx, discountTransaction.ID); rollbackErr != nil {
-			s.logger.WithFields(log.Fields{
-				"transaction_id": discountTransaction.ID,
-			}).WithError(rollbackErr).Error("failed to rollback usage")
-			return rollbackErr
-		}
-
-		return err
 	}
 	return nil
 }

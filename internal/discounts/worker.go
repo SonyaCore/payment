@@ -2,7 +2,6 @@ package discounts
 
 import (
 	"context"
-	"errors"
 	log "github.com/sirupsen/logrus"
 	"payment/api/models"
 	"payment/internal/wallets"
@@ -63,11 +62,6 @@ func (w *Worker) Consume(seed *Seed) *Response {
 	var (
 		err error
 	)
-	if err = w.IsUsed(seed.ctx, seed.discount); err != nil {
-		return &Response{
-			Error: err,
-		}
-	}
 	err = w.Allocation(seed.ctx, seed.discount, seed.phoneNumber)
 	if err != nil {
 		return &Response{
@@ -78,21 +72,6 @@ func (w *Worker) Consume(seed *Seed) *Response {
 	return &Response{
 		isDone: true,
 	}
-}
-
-func (w *Worker) IsUsed(ctx context.Context, discount *models.Discount) error {
-	var (
-		err   error
-		count int64
-	)
-
-	if count, err = w.DiscountService.Count(ctx, discount.ID); err != nil {
-		return err
-	}
-	if count >= discount.UsageLimit {
-		return errors.New("usage limit exceed")
-	}
-	return nil
 }
 
 func (w *Worker) Allocation(ctx context.Context, discount *models.Discount, phoneNumber string) error {

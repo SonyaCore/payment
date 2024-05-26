@@ -13,7 +13,6 @@ import (
 
 type IWallet interface {
 	Create(ctx context.Context, wallet *models.Wallet) (*models.Wallet, error)
-	IsAvailable(ctx context.Context, id uuid.UUID) (bool, error)
 	Update(ctx context.Context, wallet *models.Wallet) (*models.Wallet, error)
 	Delete(ctx context.Context, phone string) (*models.Wallet, error)
 	Transaction(ctx context.Context, wallet *models.Wallet, transaction *models.Transaction) error
@@ -44,20 +43,6 @@ func (r *WalletService) Create(ctx context.Context, wallet *models.Wallet) (*mod
 		"wallet":  wallet.ID,
 	}).Info("wallet created")
 	return wallet, nil
-}
-
-func (r *WalletService) IsAvailable(ctx context.Context, id uuid.UUID) (bool, error) {
-	var count int64
-	err := r.db.
-		Model(new(models.Wallet)).
-		WithContext(ctx).
-		Where("id = ?", id).
-		Count(&count).Error
-	if err != nil {
-		r.logger.Error(err)
-		return false, err
-	}
-	return count > 0, nil
 }
 
 func (r *WalletService) Delete(ctx context.Context, phone string) (*models.Wallet, error) {
