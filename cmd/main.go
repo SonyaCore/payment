@@ -20,7 +20,7 @@ import (
 
 // Program Info
 var (
-	version = "1.1.0"
+	version = "1.1.1"
 	build   = "Custom"
 	name    = "Payment Service"
 )

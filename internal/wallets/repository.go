@@ -84,12 +84,6 @@ func (r *WalletService) Transaction(ctx context.Context, wallet *models.Wallet, 
 	var err error
 	transaction.Status = models.Pending
 
-	// Start a transaction
-	tx := r.db.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-
 	switch transaction.Type {
 	case models.Deposit:
 		wallet.Amount += transaction.Amount
@@ -97,26 +91,17 @@ func (r *WalletService) Transaction(ctx context.Context, wallet *models.Wallet, 
 		wallet.Amount -= transaction.Amount
 	}
 
-	if err = tx.Create(&transaction).Error; err != nil {
+	if transaction, err = r.transaction.Create(ctx, transaction); err != nil {
 		r.logger.Error(err)
-		tx.Rollback()
 		return fmt.Errorf("could not create Transaction: %w", err)
 	}
-
-	// Update the wallet balance
 	if _, err = r.Update(ctx, wallet); err != nil {
 		if err = r.transaction.ChangeStatus(ctx, transaction.ID, models.Failed); err != nil {
-			tx.Rollback()
 			return fmt.Errorf("could not update transaction status: %w", err)
 		}
 		return fmt.Errorf("could not update wallet balance: %w", err)
 	}
 
-	// Commit the transaction
-	if err = tx.Commit().Error; err != nil {
-		r.logger.Error(err)
-		return fmt.Errorf("could not commit transaction: %w", err)
-	}
 	if err = r.transaction.ChangeStatus(ctx, transaction.ID, models.Completed); err != nil {
 		r.logger.Error(err)
 		return fmt.Errorf("could not update Transaction status: %w", err)
