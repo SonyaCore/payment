@@ -12,7 +12,6 @@ import (
 	"payment/pkg/config"
 	"payment/pkg/db"
 	"payment/pkg/utils"
-	"payment/pkg/validators"
 	"runtime"
 	"strings"
 	"time"
@@ -20,7 +19,7 @@ import (
 
 // Program Info
 var (
-	version = "1.1.1"
+	version = "1.1.2"
 	build   = "Custom"
 	name    = "Payment Service"
 )
@@ -52,7 +51,7 @@ func main() {
 	logger.SetFormatter(&log.JSONFormatter{})
 	validate := validator.New()
 
-	err = validate.RegisterValidation("description", validators.DescriptionValidator)
+	err = validate.RegisterValidation("description", utils.DescriptionValidator)
 	if err != nil {
 		logger.Fatal(err)
 	}
