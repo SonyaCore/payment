@@ -50,6 +50,7 @@ This will start the payment app, which will listen and serve on port 8080.
 - GET /discount/usages: Get discount usages.
 - GET /discount/apply: Apply a discount.
 
+`Note: To use the wallet service and creating new discount codes, ensure that the token is configured in config.yaml and included in the Authorization header of your requests.`
 
 #### Examples
 
@@ -57,31 +58,39 @@ Register a new wallet
 ```shell
 curl -X POST \
   -H "Content-Type: application/json" \
+  -H "Authorization: token" \
   -d '{"phone": "PhoneNumber", "amount": 100000}' \
   http://localhost:8080/wallet/register
+
 ```
 Perform a transaction
 ```shell
 curl -X PUT \
   -H "Content-Type: application/json" \
+  -H "Authorization: token" \
   -d '{"amount": 1000, "description": "Withdrawal for groceries", "type": "withdrawal"}' \
   http://localhost:8080/wallet/PhoneNumber
 ````
 Delete a wallet
 ```shell
-curl -X DELETE http://localhost:8080/wallet/PhoneNumber
+curl -X DELETE \
+  -H "Authorization: token" \
+  http://localhost:8080/wallet/PhoneNumber
 ```
 Get wallet details by phone number
 ```shell
-curl http://localhost:8080/wallet/PhoneNumber
+curl -H "Authorization: token" \
+  http://localhost:8080/wallet/PhoneNumber
 ```
 
 Create a new discount code
 ```shell
 curl -X POST \
   -H "Content-Type: application/json" \
+  -H "Authorization: token" \
   -d '{"usage_limit": 1000, "description": "Voucher for cup league", "amount": 1000000, "type": "voucher"}' \
   http://localhost:8080/discount
+
 ```
 
 Get discount code transactions
