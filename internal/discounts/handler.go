@@ -2,10 +2,12 @@ package discounts
 
 import (
 	"encoding/json"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"payment/api/models"
+	"payment/pkg/auth"
 	"payment/pkg/db"
 	"payment/pkg/errors"
 	"payment/pkg/middleware"
@@ -19,23 +21,26 @@ type Handler struct {
 	service     Service
 	logger      *log.Logger
 	config      *Config
+	validator   *validator.Validate
 }
 
-func NewHandler(config *Config, logger *log.Logger, db *db.DB) *Handler {
+func NewHandler(config *Config, logger *log.Logger, db *db.DB, validate *validator.Validate) *Handler {
 	handler := &Handler{
 		discount:    NewDiscountService(config, logger, db),
 		transaction: NewDiscountTransactionService(config, logger, db),
 		service:     NewService(config, db, logger),
 		logger:      logger,
 		config:      config,
+		validator:   validate,
 	}
 	return handler
 }
 
 func (h *Handler) RegisterRoutes(router *mux.Router) {
+	protected := auth.AuthMiddleware(&auth.Config{Token: h.config.AuthToken})
 	discountRoutes := router.PathPrefix("/discount").Subrouter()
 
-	discountRoutes.HandleFunc("", h.createDiscount).Methods(http.MethodPost)
+	discountRoutes.HandleFunc("", protected(h.createDiscount)).Methods(http.MethodPost)
 	discountRoutes.Handle("/usages", middleware.PhoneValidatorMiddleware(http.HandlerFunc(h.discountTransactions))).Methods(http.MethodGet)
 	discountRoutes.Handle("/apply", middleware.PhoneValidatorMiddleware(http.HandlerFunc(h.applyDiscount))).Methods(http.MethodGet)
 
@@ -48,6 +53,13 @@ func (h *Handler) createDiscount(w http.ResponseWriter, r *http.Request) {
 
 	if err = json.NewDecoder(r.Body).Decode(&discount); err != nil {
 		h.logger.Error(err)
+		errors.Error(w, http.StatusBadRequest)
+		return
+	}
+
+	err = h.validator.Struct(discount)
+	if err != nil {
+		h.logger.Error(err.Error())
 		errors.Error(w, http.StatusBadRequest)
 		return
 	}
@@ -65,9 +77,16 @@ func (h *Handler) createDiscount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	discountCode, err := utils.GenerateDiscount(h.config.CodeLength)
+	if err != nil {
+		h.logger.Error(err)
+		errors.Error(w, http.StatusBadRequest)
+		return
+	}
+
 	discount.ExpirationTime = time.Now().Add(h.config.CreditExpiration)
 	discount.CreatedAt = time.Now()
-	discount.Code = utils.GenerateDiscount(h.config.CodeLength)
+	discount.Code = discountCode
 
 	if discount, err = h.discount.Create(r.Context(), discount); err != nil {
 		h.logger.Error(err)

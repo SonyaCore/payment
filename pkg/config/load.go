@@ -22,6 +22,7 @@ type DiscountConfig struct {
 
 type Config struct {
 	ServerPort     int            `yaml:"port"`
+	Token          string         `yaml:"token"`
 	DiscountConfig DiscountConfig `yaml:"discount"`
 	PostgresConfig PostgresConfig `yaml:"postgres"`
 }

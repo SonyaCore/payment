@@ -25,7 +25,7 @@ type Transaction struct {
 	Type        Type      `json:"type" gorm:"not null;type:transaction_type"`
 	Amount      int64     `json:"amount"`
 	Status      Status    `json:"status" gorm:"not null;type:transaction_status"`
-	Description string    `json:"description"`
+	Description string    `json:"description" validate:"required,description"`
 	Wallet      Wallet    `gorm:"foreignKey:WalletID;constraint:OnDelete:CASCADE;" json:"-"`
 }
 

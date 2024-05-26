@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"payment/pkg/config"
 	"payment/pkg/db"
 	"payment/pkg/utils"
+	"payment/pkg/validators"
 	"runtime"
 	"strings"
 	"time"
@@ -48,6 +50,12 @@ func main() {
 
 	logger = log.StandardLogger()
 	logger.SetFormatter(&log.JSONFormatter{})
+	validate := validator.New()
+
+	err = validate.RegisterValidation("description", validators.DescriptionValidator)
+	if err != nil {
+		logger.Fatal(err)
+	}
 
 	configFilePath := flag.String("config", "configs/config.yaml", "Path to the YAML configuration file")
 	flag.Parse()
@@ -65,11 +73,14 @@ func main() {
 	}
 	logger.Println("Connected to database")
 
-	var walletHandler = wallets.NewHandler(database, logger)
+	var walletHandler = wallets.NewHandler(database, logger, validate,
+		&wallets.Config{AuthToken: configuration.Token})
+
 	var discountHandler = discounts.NewHandler(&discounts.Config{
 		CreditExpiration: time.Duration(configuration.DiscountConfig.ExpireTime) * time.Minute,
-		CodeLength:       configuration.DiscountConfig.CodeLength},
-		logger, database)
+		CodeLength:       configuration.DiscountConfig.CodeLength,
+		AuthToken:        configuration.Token},
+		logger, database, validate)
 
 	r := mux.NewRouter()
 	http.Handle("/", utils.RecoverHandler(r))

@@ -1,5 +1,5 @@
 port: 8080
-
+token: "59f620ef37baa697fc95177404e58106"
 discount:
   expire_time : 5
   code_length: 8

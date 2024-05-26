@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"payment/api/models"
 	"payment/internal/transactions"
+	"payment/pkg/auth"
 	"payment/pkg/db"
 	"payment/pkg/errors"
 	"payment/pkg/utils"
@@ -16,12 +18,13 @@ import (
 
 // RegisterRoutes registers the routes for wallet-related operations with the provided router.
 func (h *Handler) RegisterRoutes(router *mux.Router) {
+	protected := auth.AuthMiddleware(&auth.Config{Token: h.Config.AuthToken})
 	walletRoutes := router.PathPrefix("/wallet").Subrouter()
 
-	walletRoutes.HandleFunc("/register", h.createWalletHandler).Methods(http.MethodPost)
-	walletRoutes.HandleFunc("/{phoneNumber}", h.transactionHandler).Methods(http.MethodPut)
-	walletRoutes.HandleFunc("/{phoneNumber}", h.deleteWalletHandler).Methods(http.MethodDelete)
-	walletRoutes.HandleFunc("/{phoneNumber}", h.returnByPhoneNumber).Methods(http.MethodGet)
+	walletRoutes.HandleFunc("/register", protected(h.createWalletHandler)).Methods(http.MethodPost)
+	walletRoutes.HandleFunc("/{phoneNumber}", protected(h.transactionHandler)).Methods(http.MethodPut)
+	walletRoutes.HandleFunc("/{phoneNumber}", protected(h.deleteWalletHandler)).Methods(http.MethodDelete)
+	walletRoutes.HandleFunc("/{phoneNumber}", protected(h.returnByPhoneNumber)).Methods(http.MethodGet)
 }
 
 // Handler is a struct that holds the services and logger needed for handling wallet and transaction-related requests.
@@ -29,15 +32,19 @@ type Handler struct {
 	WalletService      IWallet
 	TransactionService transactions.ITransaction
 	Logger             *logrus.Logger
+	Validator          *validator.Validate
+	Config             *Config
 }
 
 // NewHandler initializes a new Handler with the provided database connection and logger.
 // It sets up the WalletService and TransactionService with their respective dependencies.
-func NewHandler(db *db.DB, logger *logrus.Logger) *Handler {
+func NewHandler(db *db.DB, logger *logrus.Logger, validate *validator.Validate, config *Config) *Handler {
 	handler := &Handler{
 		Logger:             logger,
 		TransactionService: transactions.NewTransactionsService(logger, db),
 		WalletService:      NewWallet(logger, db),
+		Validator:          validate,
+		Config:             config,
 	}
 	return handler
 }
@@ -129,6 +136,7 @@ func (h *Handler) transactionHandler(w http.ResponseWriter, r *http.Request) {
 		errors.Error(w, http.StatusBadRequest)
 		return
 	}
+
 	if phoneNumber == "" {
 		errors.Error(w, http.StatusBadRequest, "wallet phone number is required")
 		return
@@ -148,6 +156,13 @@ func (h *Handler) transactionHandler(w http.ResponseWriter, r *http.Request) {
 		Type:        transaction.Type,
 		Amount:      transaction.Amount,
 		Description: transaction.Description,
+	}
+
+	err = h.Validator.Struct(tx)
+	if err != nil {
+		h.Logger.Error(err.Error())
+		errors.Error(w, http.StatusBadRequest)
+		return
 	}
 
 	switch transaction.Type {

@@ -16,7 +16,7 @@ const (
 type Discount struct {
 	db.StrictBaseModel
 	Code           string                 `json:"code" gorm:"not null, unique" generator:"required"`
-	Description    string                 `json:"description" gorm:"not null;type:varchar(255)"`
+	Description    string                 `json:"description" gorm:"not null;type:varchar(255)" validate:"required,description"`
 	Amount         int64                  `json:"amount" generator:"gte=0" gorm:"not null default 0;type:integer"`
 	UsageLimit     int64                  `json:"usage_limit" generator:"required,gt=0"`
 	ExpirationTime time.Time              `json:"expiration_time" gorm:"not null" generator:"required"`
